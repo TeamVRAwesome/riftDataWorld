@@ -5,42 +5,10 @@ using System.Linq;
 
 public class dataManager : MonoBehaviour {
 
+	public System.Action<List<DataPoint>> finishedLoading;
+ 
 
-	List<CountrySet> allData;
-	public List<CountrySet> perCData;
-
-	[System.Serializable]
-	public class dataObject
-	{
-
-		public string label;
-		public float lati;
-		public float longi;
-		public float sphereRad;
-		public GameObject obj;
-		private Vector3 position()
-		{
-			float LAT = lati* Mathf.PI / 180;
-			float LON = longi * Mathf.PI / 180;
-			float x = -sphereRad * Mathf.Cos(LAT) * Mathf.Cos(LON);
-			float y =  sphereRad * Mathf.Sin(LAT);
-			float z =  sphereRad * Mathf.Cos(LAT) * Mathf.Sin(LON);
-			return new Vector3(x,y,z);
-		}
-		public float value;
-		public string infotext;
-
-
-	}
-	public dataObject[] countryData;
-
-	[System.Serializable]
-	class dataLine
-	{
-		public string label1, label2, label3, freqLable, country, timeframe;
-		public float value;
-
-	}
+	public List<DataPoint> dataPoints;
 
 	[System.Serializable]
 	public class CountrySet
@@ -49,27 +17,25 @@ public class dataManager : MonoBehaviour {
 		public float Val;
 	}
 
+
+
+	[System.Serializable]
+	public class DataPoint
+	{
+		public string shortLabel;
+		public string label;
+		public float lat;
+		public float lon;
+		public List<string> dLabel;
+		public List<float> dVal;
+
+	}
+
 	// Use this for initialization
 	void Start ()
 	{
-		//import csv
-		List<dataLine> csvLines;
-		bool sload = loadData(out csvLines);
-		var a = (from dta in csvLines
-		           group dta by new {dta.country, dta.value}
-		into g
-		select new CountrySet
-		{
-			Country = g.Key.country.ToString(),
-			Val = g.Sum(s => s.value)
-		});
 
-		//create array of dataPoints with one for each country
-		int totalLines = a.Count();
-		countryData = new dataObject[totalLines];
-		int countryDataIndexer = 0;
-		allData = a.ToList();
-		totalDataSets();
+
 
 	
 	}
@@ -79,54 +45,61 @@ public class dataManager : MonoBehaviour {
 	
 	}
 
-	bool loadData(out List<dataLine> allLines)
+	void placePoints()
 	{
-		List<dataLine> _lines = new List<dataLine>();
-		string fileBuffer = System.IO.File.ReadAllText("./MERCH_EXP.csv");
-		string[] lineData = fileBuffer.Split(',');
+
+
+	}
+
+	public bool loadData(string filePath, out List<DataPoint> returnList)
+	{
+		string[] fileBuffer = System.IO.File.ReadAllLines(filePath);
 		Debug.Log (fileBuffer);
-		for (int i = 14; i <lineData.Length - 7; i+=7) 
+		int lineCount = fileBuffer.Length;
+		string[] headerLine = fileBuffer[0].Split(',');
+		int lineLenght = headerLine.Length;
+		List<DataPoint> tmpList = new List<DataPoint>();
+		for(int i = 1; i < lineCount; i++) //per line
 		{
-			float f;
-			float.TryParse(lineData[i+6], out f);
-			dataLine thisLine =	new dataLine
+			string[] lineString = fileBuffer[i].Split(',');
+			float lati;
+			float.TryParse(lineString[2], out lati);
+			float loni;
+			float.TryParse(lineString[3], out loni);
+			List<string> labels = new List<string>();
+			List<float> objs = new List<float>();
+
+			for(int v = 4; v < lineLenght; v++) //
 			{
-				label1 = lineData[i], 
-				label2 = lineData[i+1],
-				label3 = lineData[i+2],
-				freqLable = lineData[i+3],
-				country = lineData[i+4],
-				timeframe = lineData[i+5],
-				value = f
+				labels.Add (headerLine[v]);
+				float o;
+				float.TryParse(lineString[v], out o);
+				objs.Add(o);
+			}
+			DataPoint thisPoint = new DataPoint
+			{
+				label = lineString[0],
+				shortLabel  = lineString[1],
+				lat = lati,
+				lon = loni,
+				dLabel = labels,
+				dVal = objs
 			};
-			_lines.Add(thisLine);
+			tmpList.Add(thisPoint);
 		}
-		allLines = _lines;
+		returnList = tmpList;
+		if(finishedLoading != null)
+		{
+			finishedLoading(returnList);
+		}
 		return true;
 	}
 
-	void totalDataSets()
-	{
-		string currentCountry = string.Empty;
-		int lastCCount = 0;
-		bool firstPass = true;
-		foreach(CountrySet x in allData)
-		{
-			if(currentCountry != x.Country)
-			{
-				if(!firstPass)
-					perCData.Last().Val = perCData.Last().Val/lastCCount; //avg
-				Debug.Log("found dup");
-				perCData.Add(x);
-				currentCountry = x.Country;
-				lastCCount = 1;
-			}
-			else
-			{
-				perCData.Last().Val += x.Val;
-				lastCCount++;
-			}
-		}
-	}
+
+
+
+
+
+
 
 }
