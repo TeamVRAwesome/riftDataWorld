@@ -1,25 +1,31 @@
-﻿using UnityEngine;
+using UnityEngine;
 using System.Collections;
+using System.Linq;
+using System.Collections.Generic;
 
 public class placeDataObjs : dataManager {
 
 	public GameObject dataObject;
 
-	public GameObject[] allObjs;
+
+	public GameObject dataManager;
 
 
 	// Use this for initialization
 	void Start () 
 	{
 		finishedLoading += (o) => {
+			GetComponent<sceneManager>().allObjs = new List<GameObject>();
 			foreach(var p in o)
 			{
 				DOtoGO(p);
-				Debug.Log ("Called for " + p.label);
+
 			}
+			GetComponent<sceneManager>().maxDataSetIndex = GetComponent<dataManager>().dataPoints[0].dVal.Count - 1;
+
 		};
 		
-		loadData("./Assets/Data/sampleData.csv", out dataPoints);
+		loadData("./Assets/Data/sampleData2.csv", out dataManager.GetComponent<dataManager>().dataPoints);
 	
 	}
 	
@@ -32,36 +38,19 @@ public class placeDataObjs : dataManager {
 
 	public void DOtoGO (DataPoint p)
 	{
+		Debug.Log("DOtoGO - " + p.label);
 		GameObject g = GameObject.Instantiate(dataObject, latlongToVector3(p.lat,p.lon,14.0f), Quaternion.identity) as GameObject;
-		g.GetComponentInChildren<TextMesh>().text = p.shortLabel;//string.Format("{0} \n{1} - {2}", p.label, p.dLabel[0].ToString(), p.dVal[0].ToString());
-		if(p.dVal[0] > 500000.0f)
-		{
-			g.renderer.material.color = Color.red;
-			
-			g.transform.localScale = new Vector3(4f,4f,4f);
-		}
-		else if(p.dVal[0] > 50000.0f)
-		{
-			g.renderer.material.color = Color.yellow;
-			
-			g.transform.localScale = new Vector3(2f,2f,2f);
-		}
-		else if (p.dVal[0] > 3000.0f)
-		{
-			g.renderer.material.color = Color.green;
-			
-			g.transform.localScale = new Vector3(1.5f,1.5f,1.5f);
-		}
-		else
-		{
-			g.renderer.material.color = Color.grey;
-			
-			g.transform.localScale = new Vector3(1f,1f,1f);
-		}
-
+		g.GetComponentInChildren<TextMesh>().text = p.shortLabel;
+		g.GetComponent<dataPointLinker>().objData = p;
+		g.name = p.label;
+		g.transform.parent = this.transform;
+		dataManager.GetComponent<sceneManager>().updateVis(g);
+		dataManager.GetComponent<sceneManager>().allObjs.Add(g);
 
 	
 	}
+
+
 
 	private Vector3 latlongToVector3(float latitude, float longitude, float radius)
 	{
